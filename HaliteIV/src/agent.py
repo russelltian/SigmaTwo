@@ -13,7 +13,7 @@ def argmax(arr, key=None):
 
 # Converts position from 1D to 2D representation
 def get_col_row(size, pos):
-    return (pos % size, pos // size)
+    return pos % size, pos // size
 
 
 # Returns the position in some direction relative to the current position (pos)
@@ -35,8 +35,8 @@ def getAdjacent(pos, size):
     return [
         get_to_pos(size, pos, "NORTH"),
         get_to_pos(size, pos, "SOUTH"),
-        get_to_pos(size, pos, "EAST"),
         get_to_pos(size, pos, "WEST"),
+        get_to_pos(size, pos, "EAST"),
     ]
 
 
@@ -52,7 +52,7 @@ def getDirTo(fromPos, toPos, size):
 
 
 # Possible directions a ship can move in
-DIRS = ["NORTH", "SOUTH", "EAST", "WEST"]
+DIRS = ["NORTH", "SOUTH", "WEST", "EAST"]
 # We'll use this to keep track of whether a ship is collecting halite or
 # carrying its cargo to a shipyard
 ship_states = {}
@@ -70,7 +70,7 @@ def agent(obs, config):
     # Initialize a dictionary containing commands that will be sent to the game
     action = {}
     # If there are no ships, use first shipyard to spawn a ship.
-    if len(ships) == 0 and len(shipyards) > 0:
+    if len(ships) < 3 and len(shipyards) > 0 and player_halite >= 1000:
         uid = list(shipyards.keys())[0]
         action[uid] = "SPAWN"
 
@@ -78,6 +78,9 @@ def agent(obs, config):
     if len(shipyards) == 0 and len(ships) > 0:
         uid = list(ships.keys())[0]
         action[uid] = "CONVERT"
+
+    # collision detection
+
 
     for uid, ship in ships.items():
         if uid not in action:  # Ignore ships that will be converted to shipyards
@@ -88,17 +91,39 @@ def agent(obs, config):
                 ship_states[uid] = "COLLECT"
             if cargo > 500:  # If cargo gets very big, deposit halite
                 ship_states[uid] = "DEPOSIT"
-            print("a")
+            # collision detection
+
+            # Possible positions
+            position_options = getAdjacent(pos, size)
+            # Halite in possible positions
+            halite_dict = {}
+
+            # {"EAST": (20,50)}
+            # The corresponding move direction
+            position_dict = {}
+            for n, direction in enumerate(DIRS):
+                position_dict[direction] = position_options[n]
+
+            # Store halite amount of neighbours
+            for direction in position_dict:
+                temp_pos = position_dict[direction]
+                halite_dict[direction] = obs.halite[temp_pos]
+
             ### Part 2: Use the ship's state to select an action
             if ship_states[uid] == "COLLECT":
                 # If halite at current location running low,
                 # move to the adjacent square containing the most halite
-                if obs.halite[pos] < 60:
-                    best = argmax(getAdjacent(pos, size), key=obs.halite.__getitem__)
-                    if obs.halite[get_to_pos(size, pos, DIRS[best])] < 60:
-                        action[uid] = DIRS[random.randrange(4)]
-                    else:
-                        action[uid] = DIRS[best]
+                if obs.halite[pos] < 100:
+
+                    #best = argmax(getAdjacent(pos, size), key=obs.halite.__getitem__)
+                    best_move = max(halite_dict, key=halite_dict.get)
+                    # if move to location with less than 60 halite, go random direction
+                    if halite_dict[best_move] < 100:
+                        best_move = random.choice(DIRS)
+                    # position_choices.append()
+
+                    action[uid] = best_move
+                    #DIRS[best]
 
             if ship_states[uid] == "DEPOSIT":
                 # Move towards shipyard to deposit cargo
