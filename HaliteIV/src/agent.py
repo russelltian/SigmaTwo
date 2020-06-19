@@ -69,17 +69,19 @@ def agent(obs, config):
     size = config["size"]
     # Initialize a dictionary containing commands that will be sent to the game
     action = {}
+
+    # collision detection
+    position_choices = []
+
     # If there are no ships, use first shipyard to spawn a ship.
     if len(ships) < 3 and len(shipyards) > 0 and player_halite >= 1000:
         uid = list(shipyards.keys())[0]
         action[uid] = "SPAWN"
-
+        #position_choices = list(shipyards.keys())[0].
     # If there are no shipyards, convert first ship into shipyard.
     if len(shipyards) == 0 and len(ships) > 0:
         uid = list(ships.keys())[0]
         action[uid] = "CONVERT"
-
-    # collision detection
 
 
     for uid, ship in ships.items():
@@ -94,20 +96,22 @@ def agent(obs, config):
             # collision detection
 
             # Possible positions
+            # {"WEST":2050}
             position_options = getAdjacent(pos, size)
             # Halite in possible positions
+            # {"NORTH":521}
             halite_dict = {}
 
-            # {"EAST": (20,50)}
+            # {"EAST": 2050}
             # The corresponding move direction
             position_dict = {}
             for n, direction in enumerate(DIRS):
                 position_dict[direction] = position_options[n]
-
             # Store halite amount of neighbours
             for direction in position_dict:
                 temp_pos = position_dict[direction]
-                halite_dict[direction] = obs.halite[temp_pos]
+                if position_dict[direction] not in position_choices:
+                    halite_dict[direction] = obs.halite[temp_pos]
 
             ### Part 2: Use the ship's state to select an action
             if ship_states[uid] == "COLLECT":
@@ -115,19 +119,23 @@ def agent(obs, config):
                 # move to the adjacent square containing the most halite
                 if obs.halite[pos] < 100:
 
-                    #best = argmax(getAdjacent(pos, size), key=obs.halite.__getitem__)
+                    # best = argmax(getAdjacent(pos, size), key=obs.halite.__getitem__)
                     best_move = max(halite_dict, key=halite_dict.get)
                     # if move to location with less than 60 halite, go random direction
                     if halite_dict[best_move] < 100:
                         best_move = random.choice(DIRS)
-                    # position_choices.append()
+                    # Where this ship would land on next turn
+                    position_choices.append(position_dict[best_move])
 
                     action[uid] = best_move
-                    #DIRS[best]
-
+                else:
+                    # stay still
+                    position_choices.append(pos)
             if ship_states[uid] == "DEPOSIT":
                 # Move towards shipyard to deposit cargo
                 direction = getDirTo(pos, list(shipyards.values())[0], size)
-                if direction: action[uid] = direction
-
+                if direction and get_to_pos(size, pos, direction) not in position_choices:
+                    action[uid] = direction
+                    position_choices.append(get_to_pos(size, pos, direction))
+            print(position_choices)
     return action
