@@ -57,6 +57,8 @@ DIRS = ["NORTH", "SOUTH", "WEST", "EAST"]
 # carrying its cargo to a shipyard
 ship_states = {}
 turn = 0
+
+
 #############
 # The agent #
 #############
@@ -64,7 +66,7 @@ turn = 0
 def agent(obs, config):
     global turn
     turn += 1
-   # print(turn)
+    # print(turn)
     # find steps:
     # Get the player's halite, shipyard locations, and ships (along with cargo)
     player_halite, shipyards, ships = obs.players[obs.player]
@@ -72,12 +74,15 @@ def agent(obs, config):
 
     # Initialize a dictionary containing commands that will be sent to the game
     action = {}
-    CENTER = size**2/2
-    four_spot = [int(CENTER/2), int(2*CENTER/2), int(CENTER*2.8/2), int(CENTER*3.8/2)]
+    CENTER = size ** 2 / 2
+    four_spot = [int(CENTER / 2), int(2 * CENTER / 2), int(CENTER * 2.8 / 2), int(CENTER * 3.8 / 2)]
     # collision detection
     position_choices = set()
     deposit_choices = set()  # deposit
 
+    # shipyard is considered blocking as position but not deposit
+    for shipyard_pos in list(shipyards.values()):
+        position_choices.add(shipyard_pos)
     # the halite amount
     # ship_sorted_by_halite = []
     # for ship in ships.items():
@@ -98,98 +103,112 @@ def agent(obs, config):
     '''
 
     for uid, ship in ship_sorted_by_halite:
-            if uid not in action:  # Ignore ships that will be converted to shipyards
-                pos, cargo = ship  # Get the ship's position and halite in cargo
+        if uid not in action:  # Ignore ships that will be converted to shipyards
+            pos, cargo = ship  # Get the ship's position and halite in cargo
 
-                ### Part 2: If ship is depositing, going straight to the shipyard
-                if cargo >= 500:
-                    # If no shipyard, wait till next round
-                    if len(shipyards) == 0:
-                        # position_choices.add(pos)
-                        deposit_choices.add(pos)
-                        continue
-                    # Move towards shipyard to deposit cargo
-                    direction = getDirTo(pos, list(shipyards.values())[0], size)
-                    next_pos = get_to_pos(size, pos, direction)
-                    if direction:
-                        # no collision, then move, the order of sorting decided that
-                        # all the collision happens with converting shipyard or deposit ships
-                        if next_pos not in deposit_choices:
-                            action[uid] = direction
-                            # position_choices.add(next_pos)
-                            deposit_choices.add(next_pos)
-                        # else stay still
-                        else:
-                            deposit_choices.add(pos)
-                    else:
-                        # when it stays on the shipyard
-                        deposit_choices.add(pos)
+            ### Part 2: If ship is depositing, going straight to the shipyard
+            if cargo >= 500:
+                # If no shipyard, wait till next round
+                if len(shipyards) == 0:
+                    # position_choices.add(pos)
+                    deposit_choices.add(pos)
                     continue
-                else:
-                    ### Part 3: For other ships, either collect halite or looking for halite resource
-                    # Possible positions
-                    # [1D position to north, 1D position to south, ... west, ... east ]
-                    position_options = getAdjacent(pos, size)
-                    # Halite in possible positions
-                    # {direction: halite amount}
-                    # {"NORTH":521}
-                    halite_dict = {}
-                    # {direction: 1d position}
-                    # {"EAST": 2050}
-                    # The corresponding move direction
-                    position_dict = {}
-                    for n, direction in enumerate(DIRS):
-                        position_dict[direction] = position_options[n]
-                    # Store halite amount of neighbours
-                    for direction in position_dict:
-                        temp_pos = position_dict[direction]
-                        if position_dict[direction] not in position_choices and position_dict[direction] not in deposit_choices:
-                            halite_dict[direction] = obs.halite[temp_pos]
-
-                    # if halite is enough, stay mining, however, if a ship is on deposit, stay away
-                    if obs.halite[pos] > 150:
-                        # stay still if no deposit ship coming
-                        if pos not in deposit_choices and pos not in position_choices:
-                            position_choices.add(pos)
-                        else:
-                            # move to a place without ship, if can't find, has to collide
-                            # best = argmax(getAdjacent(pos, size), key=obs.halite.__getitem__)
-                            if len(halite_dict) > 0:
-                                best_move = max(halite_dict, key=halite_dict.get)
-                                position_choices.add(position_dict[best_move])
-                                action[uid] = best_move
-                        continue
+                # Move towards shipyard to deposit cargo
+                direction = getDirTo(pos, list(shipyards.values())[0], size)
+                next_pos = get_to_pos(size, pos, direction)
+                if direction:
+                    # no collision, then move, the order of sorting decided that
+                    # all the collision happens with converting shipyard or deposit ships
+                    if next_pos not in deposit_choices:
+                        action[uid] = direction
+                        # position_choices.add(next_pos)
+                        print(turn, " ship deposit move",next_pos)
+                        deposit_choices.add(next_pos)
+                    # else stay still
                     else:
-                        # Move to the center
+                        print(turn, " ship deposit next move will hit, stay still",pos)
+                        # BUG : if next move is blocked, may be hit by other deposit ship who moves here
+                        deposit_choices.add(pos)
+                else:
+                    # when it stays on the shipyard
+                    print(turn, " ship deposit no direction, still",pos)
+                    deposit_choices.add(pos)
+                continue
+            else:
+                ### Part 3: For other ships, either collect halite or looking for halite resource
+                # Possible positions
+                # [1D position to north, 1D position to south, ... west, ... east ]
+                position_options = getAdjacent(pos, size)
+                # Halite in possible positions
+                # {direction: halite amount}
+                # {"NORTH":521}
+                halite_dict = {}
+                # {direction: 1d position}
+                # {"EAST": 2050}
+                # The corresponding move direction
+                position_dict = {}
+                for n, direction in enumerate(DIRS):
+                    position_dict[direction] = position_options[n]
+                # Store halite amount of neighbours
+                for direction in position_dict:
+                    temp_pos = position_dict[direction]
+                    if temp_pos not in position_choices and temp_pos not in deposit_choices:
+                        halite_dict[direction] = obs.halite[temp_pos]
+
+                # if halite is enough, stay mining, however, if a ship is on deposit, stay away
+                if obs.halite[pos] > 150:
+                    # stay still if no deposit ship coming
+                    if pos not in deposit_choices and pos not in position_choices:
+
+                        position_choices.add(pos)
+                        print(turn, "ship collect still" , pos)
+                    else:
+                        # move to a place without ship, if can't find, has to collide
+                        # best = argmax(getAdjacent(pos, size), key=obs.halite.__getitem__)
+
                         if len(halite_dict) > 0:
                             best_move = max(halite_dict, key=halite_dict.get)
-                            if halite_dict[best_move] > 150:
+                            position_choices.add(position_dict[best_move])
+                            action[uid] = best_move
+                            print(turn, " ship collect move" , position_dict[best_move])
+                    continue
+                else:
+                    # Move to the one of random 4 points
+                    print(turn, " ",pos," halite" , halite_dict)
+                    if len(halite_dict) > 0:
+                        best_move = max(halite_dict, key=halite_dict.get)
+                        if halite_dict[best_move] >= 150:
+                            position_choices.add(position_dict[best_move])
+                            print(turn," ",pos, " ship search move to neibour > 150" , position_dict[best_move])
+                            action[uid] = best_move
+                        else:
+                            next_dir = None
+                            # randomly pick a point until not the same place
+                            while not next_dir:
+                                next_dir = getDirTo(pos, random.choice(four_spot), size)
+                            next_pos = position_dict[next_dir]
+                            if next_pos not in deposit_choices and next_pos not in position_choices:
+                                action[uid] = next_dir
+                                position_choices.add(next_pos)
+                                print(turn, " ",pos," ship search no 150 so random move" , next_pos)
+                            else:
                                 position_choices.add(position_dict[best_move])
                                 action[uid] = best_move
-                            else:
-                                next_dir = None
-                                # randomly pick a point until not the same place
-                                while not next_dir:
-                                    next_dir = getDirTo(pos, random.choice(four_spot), size)
-                                next_pos = position_dict[next_dir]
-                                if next_pos not in deposit_choices and next_pos not in position_choices:
-                                    action[uid] = next_dir
-                                    position_choices.add(next_pos)
-                        else:
-                            position_choices.add(pos)
-                        continue
-
+                                print(turn," ",pos, " ship search no 150 and can't random move" , position_dict[best_move])
+                    else:
+                        position_choices.add(pos)
+                        print(turn, " ",pos," ship search can't random move" , pos)
+                    continue
 
     # For each 1500 energy stored, we spawn a new ship
     num_of_ship = int(player_halite / 1500)
     if len(ships) < num_of_ship and len(shipyards) > 0 and player_halite >= 1000:
         uid = list(shipyards.keys())[0]
         pos = list(shipyards.values())[0]
-        if pos not in deposit_choices or position_choices:
+        if pos not in deposit_choices:
             action[uid] = "SPAWN"
             position_choices.add(pos)
 
-
-    #print(deposit_choices.intersection(position_choices) )
-    #print(action)
+    print(deposit_choices.intersection(position_choices))
+    # print(action)
     return action
