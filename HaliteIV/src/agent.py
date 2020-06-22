@@ -1,7 +1,6 @@
 from kaggle_environments.envs.halite.helpers import *
 import random
-
-
+import sys
 ####################
 # Helper functions #
 ####################
@@ -9,7 +8,6 @@ import random
 # Helper function we'll use for getting adjacent position with the most halite
 def argmax(arr, key=None):
     return arr.index(max(arr, key=key)) if key else arr.index(max(arr))
-
 
 # Converts position from 1D to 2D representation
 def get_col_row(size, pos):
@@ -66,7 +64,7 @@ turn = 0
 def agent(obs, config):
     global turn
     turn += 1
-    # print(turn)
+    # #print(turn)
     # find steps:
     # Get the player's halite, shipyard locations, and ships (along with cargo)
     player_halite, shipyards, ships = obs.players[obs.player]
@@ -76,6 +74,9 @@ def agent(obs, config):
     action = {}
     CENTER = size ** 2 / 2
     four_spot = [int(CENTER / 2), int(2 * CENTER / 2), int(CENTER * 2.8 / 2), int(CENTER * 3.8 / 2)]
+    # point search range
+   # searchRadius = max(int(size/2))
+
     # collision detection
     position_choices = set()
     deposit_choices = set()  # deposit
@@ -122,16 +123,16 @@ def agent(obs, config):
                     if next_pos not in deposit_choices:
                         action[uid] = direction
                         # position_choices.add(next_pos)
-                        print(turn, " ship deposit move",next_pos)
+                        #print(turn, " ship deposit move",next_pos)
                         deposit_choices.add(next_pos)
                     # else stay still
                     else:
-                        print(turn, " ship deposit next move will hit, stay still",pos)
+                        #print(turn, " ship deposit next move will hit, stay still",pos)
                         # BUG : if next move is blocked, may be hit by other deposit ship who moves here
                         deposit_choices.add(pos)
                 else:
                     # when it stays on the shipyard
-                    print(turn, " ship deposit no direction, still",pos)
+                    #print(turn, " ship deposit no direction, still",pos)
                     deposit_choices.add(pos)
                 continue
             else:
@@ -161,7 +162,7 @@ def agent(obs, config):
                     if pos not in deposit_choices and pos not in position_choices:
 
                         position_choices.add(pos)
-                        print(turn, "ship collect still" , pos)
+                        #print(turn, "ship collect still" , pos)
                     else:
                         # move to a place without ship, if can't find, has to collide
                         # best = argmax(getAdjacent(pos, size), key=obs.halite.__getitem__)
@@ -170,16 +171,16 @@ def agent(obs, config):
                             best_move = max(halite_dict, key=halite_dict.get)
                             position_choices.add(position_dict[best_move])
                             action[uid] = best_move
-                            print(turn, " ship collect move" , position_dict[best_move])
+                            #print(turn, " ship collect move" , position_dict[best_move])
                     continue
                 else:
                     # Move to the one of random 4 points
-                    print(turn, " ",pos," halite" , halite_dict)
+                    #print(turn, " ",pos," halite" , halite_dict)
                     if len(halite_dict) > 0:
                         best_move = max(halite_dict, key=halite_dict.get)
                         if halite_dict[best_move] >= 150:
                             position_choices.add(position_dict[best_move])
-                            print(turn," ",pos, " ship search move to neibour > 150" , position_dict[best_move])
+                            #print(turn," ",pos, " ship search move to neibour > 150" , position_dict[best_move])
                             action[uid] = best_move
                         else:
                             next_dir = None
@@ -190,14 +191,14 @@ def agent(obs, config):
                             if next_pos not in deposit_choices and next_pos not in position_choices:
                                 action[uid] = next_dir
                                 position_choices.add(next_pos)
-                                print(turn, " ",pos," ship search no 150 so random move" , next_pos)
+                                #print(turn, " ",pos," ship search no 150 so random move" , next_pos)
                             else:
                                 position_choices.add(position_dict[best_move])
                                 action[uid] = best_move
-                                print(turn," ",pos, " ship search no 150 and can't random move" , position_dict[best_move])
+                                #print(turn," ",pos, " ship search no 150 and can't random move" , position_dict[best_move])
                     else:
                         position_choices.add(pos)
-                        print(turn, " ",pos," ship search can't random move" , pos)
+                        #print(turn, " ",pos," ship search can't random move" , pos)
                     continue
 
     # For each 1500 energy stored, we spawn a new ship
@@ -209,6 +210,6 @@ def agent(obs, config):
             action[uid] = "SPAWN"
             position_choices.add(pos)
 
-    print(deposit_choices.intersection(position_choices))
-    # print(action)
+    #print(deposit_choices.intersection(position_choices))
+    # #print(action)
     return action
