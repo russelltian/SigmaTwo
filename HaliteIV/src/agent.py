@@ -96,6 +96,7 @@ def agent(obs, config):
         action[uid] = "CONVERT"
 
     '''
+    
     priority check,
     0. Depositing ship always go straight to the base
     1. collecting ships don't get bothered, they don't move until finish collecting
