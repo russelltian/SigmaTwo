@@ -7,8 +7,8 @@ from src import agent as modela
 from src import timevalue_agent as modelb
 import random
 # Create a test environment for use later
-time_value_ratio = [0.8, 0.85, 0.88, 0.9, 0.92, 0.95, 0.97]
-min_turns_to_spawn = [20,15,10,5]
+time_value_ratio = [0.85, 0.88, 0.9, 0.92, 0.95]
+min_turns_to_spawn = [20,10]
 spawn_payoff_factor = [3.0,4.0,5.0,6.0,7.0,8.0,9.0]
 
 leaderboard = {}
@@ -35,6 +35,8 @@ def calcScore(a,b,a_score,b_score,n):
     b_rank = leaderboard[b[0]][b[1]][b[2]][0]
     diff = abs(a_rank-b_rank) if a_rank != b_rank else 50
     diff = min(diff,50)
+    leaderboard[a[0]][a[1]][a[2]][0] = max(1,leaderboard[a[0]][a[1]][a[2]][0])
+    leaderboard[b[0]][b[1]][b[2]][0] = max(1,leaderboard[b[0]][b[1]][b[2]][0])
     if a_score > b_score:
         leaderboard[a[0]][a[1]][a[2]][0] += int(diff/n*timeValue[leaderboard[a[0]][a[1]][a[2]][1]])
         leaderboard[a[0]][a[1]][a[2]][1] += 1
@@ -67,7 +69,7 @@ def calcScore(a,b,a_score,b_score,n):
     return
    # print(leaderboard[a[0]][a[1]][a[2]],leaderboard[b[0]][b[1]][b[2]])
 board_size = 21
-game = 100
+game = 200
 while game > 0:
     game -= 1
     print("Game left: ", game)
