@@ -95,8 +95,8 @@ class Board:
             # print("Deleting to_pos:",to_pos, "for", ship_uid)
             # print(self.possible_ships[to_pos])
             del self.possible_ships[to_pos][ship_uid]
-def get_time_value_agent(time_value_ratio = 0.98,min_turns_to_spawn=20, max_ships = 200, spawn_payoff_factor = 8.0,
-                         debug = False ):
+def get_time_value_agent(time_value_ratio = 0.92,min_turns_to_spawn=20, max_ships = 200, spawn_payoff_factor = 4.0,
+                         debug = False,maxDepth = 3 ):
     """Helper function to define an agent.
 
         Exists so I can pass different top-level attributes to agents with the same logic.
@@ -179,7 +179,6 @@ def get_time_value_agent(time_value_ratio = 0.98,min_turns_to_spawn=20, max_ship
         for i in range(40):
             ship_move_cost_ratios.append(genval)
             genval = genval * (1.0 - config.moveCost)
-
         def get_col(pos):
             """Gets the column index of a position."""
             return pos % size
@@ -296,13 +295,6 @@ def get_time_value_agent(time_value_ratio = 0.98,min_turns_to_spawn=20, max_ship
                         else:
                             mined[mined_pos] = 0
 
-                        # Some slight fudging on rewards - we don't want to mine halite if it takes us below
-                        # the regen threshold, because we assume that will be worse in the long run.
-                        # This might turn out to be a bad plan in some situations, since it also
-                        # means our opponents can collect the new halite.
-                        # if mined_halite < 17:
-                        #    mined_halite = -10
-
                         mined[mined_pos] += 1
 
                         final_halite = final_halite + mined_halite
@@ -328,7 +320,7 @@ def get_time_value_agent(time_value_ratio = 0.98,min_turns_to_spawn=20, max_ship
             else:
                 total_time_value_loss = time_value_ratios[-1]
                 print(
-                    "Tried to find a time_value_ratio past the end of the preculated list. This should only happen if you aren't pre-calculating enough of them. Path:",
+                    "Tried to find a time_value_ratio past the end of the pre-calculated list. This should only happen if you aren't pre-calculating enough of them. Path:",
                     path, "Remaining Steps:", remaining_steps)
 
             # Note the above counts an extra step from the path (since the first step is 'current location'),
@@ -376,7 +368,7 @@ def get_time_value_agent(time_value_ratio = 0.98,min_turns_to_spawn=20, max_ship
 
             return min_distance
 
-        def get_best_move(pos, plans, starting_halite=0, path_so_far=None, max_depth=3):
+        def get_best_move(pos, plans, starting_halite=0, path_so_far=None, max_depth=maxDepth):
             """Figures out which move has the best time-value to its yield.
 
             This can be either because a particular move will get us to harvest more
